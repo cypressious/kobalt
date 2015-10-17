@@ -63,7 +63,6 @@ public class AndroidPlugin @Inject constructor() : BasePlugin() {
             directory = File(project.directory)
         }.run(arrayListOf(
                 "crunch",
-//                "-I", androidJar.toString(),
                 "-v",
                 "-S", "app/src/main/res",
                 "-C", crunchedPngDir
@@ -86,7 +85,7 @@ public class AndroidPlugin @Inject constructor() : BasePlugin() {
                 "--debug-mode",
                 "-0", "apk",
                 "--custom-package", applicationId,
-                "--output-text-symbols", dirGet(intermediates, "symbol", "debug"))
+                "--output-text-symbols", dirGet(intermediates, "symbol", flavor))
         )
         return TaskResult()
     }
