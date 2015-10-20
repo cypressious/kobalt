@@ -2,27 +2,25 @@ package com.beust.kobalt.plugin.android
 
 import com.beust.kobalt.api.BasePlugin
 import com.beust.kobalt.api.KobaltContext
-import com.beust.kobalt.api.Project
-import com.beust.kobalt.api.annotation.Directive
-import com.beust.kobalt.api.annotation.Task
 import com.beust.kobalt.internal.TaskResult
+import com.beust.kobalt.maven.FileDependency
 import com.beust.kobalt.misc.RunCommand
 import com.beust.kobalt.misc.log
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
+import com.beust.kobalt.api.Project
+import com.beust.kobalt.api.annotation.Directive
+import com.beust.kobalt.api.annotation.Task
+import java.nio.file.Path
 import javax.inject.Inject
 import javax.inject.Singleton
 
-class AndroidConfiguration(project: Project) {
-
+class AndroidConfiguration() {
 }
 
 @Directive
-public fun android(project: Project, init: AndroidConfiguration.() -> Unit)
-        : AndroidConfiguration {
-    val pd = AndroidConfiguration(project)
+public fun android(init: AndroidConfiguration.() -> Unit) : AndroidConfiguration {
+    val pd = AndroidConfiguration()
     pd.init()
     return pd
 }
@@ -35,6 +33,11 @@ public class AndroidPlugin @Inject constructor() : BasePlugin() {
     val compileSdkVersion = "23"
     val buildToolsVersion = "23.0.1"
 
+    override fun apply(project: Project, context: KobaltContext) {
+        log(1, "Applying plug-in Android on project $project")
+        project.compileDependencies.add(FileDependency(androidJar.toString()))
+    }
+
     fun dirGet(dir: Path, vararg others: String) : String {
         val result = Paths.get(dir.toString(), *others)
         with(result.toFile()) {
@@ -43,6 +46,8 @@ public class AndroidPlugin @Inject constructor() : BasePlugin() {
         }
         return result.toString()
     }
+
+    val androidJar = Paths.get(ANDROID_HOME, "platforms", "android-$compileSdkVersion", "android.jar")
 
     @Task(name = "generateR", description = "Generate the R.java file", runBefore = arrayOf("compile"))
     fun taskGenerateRFile(project: Project) : TaskResult {
@@ -107,4 +112,3 @@ public class AndroidPlugin @Inject constructor() : BasePlugin() {
 -0 apk
 --output-text-symbols /Users/beust/kotlin/kotlin-android-example/app/build/intermediates/symbols/debug
 */
-

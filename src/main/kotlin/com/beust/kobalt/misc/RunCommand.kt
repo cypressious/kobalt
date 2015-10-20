@@ -1,6 +1,5 @@
 package com.beust.kobalt.misc
 
-import com.beust.kobalt.file
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStream
