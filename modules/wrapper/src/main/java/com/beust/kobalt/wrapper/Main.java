@@ -120,8 +120,17 @@ public class Main {
         return System.getProperty("os.name").contains("Windows");
     }
 
+    private static final boolean DEV_MODE = true;
+
     private Path installJarFile() throws IOException {
-        Properties properties = maybeCreateProperties();
+        Properties properties;
+        if (! DEV_MODE) {
+            properties = maybeCreateProperties();
+        } else {
+            System.out.println("*****\n********************* DEV MODE IS ON\n*****");
+            properties = new Properties();
+            properties.put("kobalt.version", "0.273");
+        }
 
         String version = properties.getProperty(PROPERTY_VERSION);
         initWrapperFile(version);
@@ -161,12 +170,14 @@ public class Main {
         //
         // Copy the wrapper files in the current kobalt/wrapper directory
         //
+        String[] FILES = new String[] { KOBALTW, "kobalt/wrapper/" + FILE_NAME + "-wrapper.jar" };
+
         if (! noOverwrite && ! wrapperVersion.equals(version)) {
             log(2, "Copying the wrapper files");
             for (String file : FILES) {
                 Path to = Paths.get(new File(".").getAbsolutePath(), file);
                 boolean extractFile = true;
-                if (file.equals("kobaltw")) {
+                if (file.equals(KOBALTW)) {
                     File envFile = new File("/bin/env");
                     if (!envFile.exists()) {
                         envFile = new File("/usr/bin/env");
@@ -174,7 +185,7 @@ public class Main {
                     if (envFile.exists()) {
                         log(2, "Located " + envFile.getAbsolutePath() + ", generating " + file);
                         String content = "#!" + envFile.getAbsolutePath() + " bash\n"
-                                + "java -jar $(dirname $0)/kobalt/wrapper/kobalt-wrapper.jar $*\n";
+                                + "java -jar $(dirname $0)/kobalt/wrapper/kobalt-wrapper*.jar $*\n";
                         Files.write(to, content.getBytes());
                         extractFile = false;
                     }
@@ -219,16 +230,13 @@ public class Main {
                     try {
                         Files.createDirectories(entryPath.getParent());
                         Files.copy(zipFile.getInputStream(entry), entryPath, StandardCopyOption.REPLACE_EXISTING);
-                    } catch (FileSystemException ex) {
-                        log(2, "Couldn't copy to " + entryPath);
-                        throw new IOException(ex);
+                    } catch (IOException ex) {
+                        log(2, "Couldn't copy to " + entryPath + ": " + ex.getMessage());
                     }
                 }
             }
         }
     }
-
-    private static final String[] FILES = new String[] { KOBALTW, "kobalt/wrapper/" + FILE_NAME + "-wrapper.jar" };
 
     private void download(File file, String version) throws IOException {
         for (int attempt = 0; attempt < 3; ++attempt) {

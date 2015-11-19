@@ -184,6 +184,15 @@ class Variant(val productFlavorName: String = "", val buildTypeName: String = ""
 
     fun toTask(taskName: String) = taskName + productFlavorName.capitalize() + buildTypeName.capitalize()
 
+    fun toArchiveName(archiveName: String, suffix: String) : String {
+        val variantSuffix =
+            if (isDefault) ""
+            else "-" + listOf(productFlavorName, buildTypeName).joinToString("-")
+        val short = archiveName.substring(0, archiveName.length - suffix.length)
+        val result = "$short$variantSuffix$suffix"
+        return result
+    }
+
     fun sourceDirectories(project: Project) : List<File> {
         val sourceDirectories = project.sourceDirectories.map { File(it) }
         if (isDefault) return sourceDirectories

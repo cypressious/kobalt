@@ -48,11 +48,11 @@ class Logger(val dev: Boolean) {
     final fun debug(tag: String, message: String) =
         println(getPattern("D", message, message, tag))
 
-    final fun error(tag: String, message: String, e: Throwable? = null) {
+    final fun error(tag: String, text: String, e: Throwable? = null) {
         val docUrl = if (e is KobaltException && e.docUrl != null) e.docUrl else null
-        val text = if (e != null) e.message else { "<unknown error>" }
-        val shortMessage = "***** E $text " + docUrl?.let { " Documentation: $docUrl" }
-        val longMessage = "*****\n***** ERROR $text\n*****"
+        val fullText = text + " " + (if (e != null) e.message else { "<unknown error>" })
+        val shortMessage = "***** E $fullText " + docUrl?.let { " Documentation: $docUrl" }
+        val longMessage = "*****\n***** ERROR $fullText\n*****"
 
         println(getPattern("E", shortMessage, longMessage, tag))
         if (KobaltLogger.LOG_LEVEL > 1) {

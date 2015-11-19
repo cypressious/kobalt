@@ -1,6 +1,7 @@
 package com.beust.kobalt.plugin.packaging
 
 import com.beust.kobalt.IFileSpec
+import com.beust.kobalt.misc.KFiles
 import com.beust.kobalt.misc.log
 import com.google.common.io.CharStreams
 import java.io.*
@@ -43,12 +44,15 @@ public class JarUtils {
                             outputStream.putNextEntry(entry)
                             outputStream.closeEntry()
                         }
-                        val fileSpecs: List<IFileSpec> = source.listFiles().map { IFileSpec.FileSpec(it.name) }
+                        val fileSpecs: List<IFileSpec> = KFiles.findRecursively(source).map {
+                            IFileSpec.FileSpec(source.path + "/" + it)
+                        }
                         val subFiles = IncludedFile(From(file.from), To(file.to), fileSpecs)
+                        log(2, "Writing contents of directory $source")
                         addSingleFile(directory, subFiles, outputStream, expandJarFiles)
                     } else {
                         if (expandJarFiles and source.name.endsWith(".jar")) {
-                            log(2, "Writing contents of jar file ${source}")
+                            log(2, "Writing contents of jar file $source")
                             val stream = JarInputStream(FileInputStream(source))
                             var entry = stream.nextEntry
                             while (entry != null) {

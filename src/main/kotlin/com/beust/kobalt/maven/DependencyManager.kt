@@ -28,7 +28,8 @@ public class DependencyManager @Inject constructor(val executors: KobaltExecutor
             result.addAll(transitiveClosure(dependencies))
         }
         result.addAll(runClasspathContributors(project, context))
-        result.addAll(dependentProjectDependencies(dependentProjects, project, context))
+        val projDeps = dependentProjectDependencies(dependentProjects, project, context)
+        result.addAll(projDeps)
 
         return result
     }

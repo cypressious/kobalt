@@ -4,10 +4,7 @@ import com.beust.kobalt.IFileSpec
 import com.beust.kobalt.IFileSpec.FileSpec
 import com.beust.kobalt.IFileSpec.Glob
 import com.beust.kobalt.TaskResult
-import com.beust.kobalt.api.ConfigPlugin
-import com.beust.kobalt.api.Kobalt
-import com.beust.kobalt.api.KobaltContext
-import com.beust.kobalt.api.Project
+import com.beust.kobalt.api.*
 import com.beust.kobalt.api.annotation.Directive
 import com.beust.kobalt.api.annotation.ExportedProjectProperty
 import com.beust.kobalt.api.annotation.Task
@@ -124,7 +121,7 @@ class PackagingPlugin @Inject constructor(val dependencyManager : DependencyMana
         allFiles.add(IncludedFile(From(fullDir), To(WEB_INF), listOf(Glob("**"))))
 
         val jarFactory = { os:OutputStream -> JarOutputStream(os, manifest) }
-        return generateArchive(project, ".war", allFiles,
+        return generateArchive(project, war.name, ".war", allFiles,
                 false /* don't expand jar files */, jarFactory)
     }
 
@@ -161,7 +158,11 @@ class PackagingPlugin @Inject constructor(val dependencyManager : DependencyMana
         if (jar.fatJar) {
             log(2, "Creating fat jar")
 
-            listOf(dependencyManager.transitiveClosure(project.compileDependencies),
+            val dependentProjects = project.projectProperties.get(JvmCompilerPlugin.DEPENDENT_PROJECTS)
+                as List<ProjectDescription>
+            val allDeps = dependencyManager.calculateDependencies(project, context, dependentProjects)
+            listOf(allDeps,
+                    dependencyManager.transitiveClosure(project.compileDependencies),
                     dependencyManager.transitiveClosure(project.compileRuntimeDependencies)).forEach { dep ->
                 dep.map { it.jarFile.get() }.forEach {
                     if (!isExcluded(it, jar.excludes)) {
@@ -180,7 +181,7 @@ class PackagingPlugin @Inject constructor(val dependencyManager : DependencyMana
         }
         val jarFactory = { os:OutputStream -> JarOutputStream(os, manifest) }
 
-        return generateArchive(project, ".jar", allFiles,
+        return generateArchive(project, jar.name, ".jar", allFiles,
                 true /* expandJarFiles */, jarFactory)
     }
 
@@ -222,21 +223,17 @@ class PackagingPlugin @Inject constructor(val dependencyManager : DependencyMana
 
     private fun generateZip(project: Project, zip: Zip) {
         val allFiles = findIncludedFiles(project.directory, zip.includedFiles, zip.excludes)
-        generateArchive(project, ".zip", allFiles)
+        generateArchive(project, zip.name, ".zip", allFiles)
     }
 
     private val DEFAULT_STREAM_FACTORY = { os : OutputStream -> ZipOutputStream(os) }
 
-    private fun generateArchive(project: Project, suffix: String,
+    private fun generateArchive(project: Project, archiveName: String?, suffix: String,
             includedFiles: List<IncludedFile>,
             expandJarFiles : Boolean = false,
             outputStreamFactory: (OutputStream) -> ZipOutputStream = DEFAULT_STREAM_FACTORY) : File {
-        val variantSuffix = with(context.variant) {
-            if (isDefault) ""
-            else listOf(productFlavorName, buildTypeName).joinToString("-")
-        }
-
-        val fullArchiveName = listOf(project.name, project.version!!, variantSuffix).joinToString("-") + suffix
+        val fullArchiveName = context.variant.toArchiveName(
+                archiveName ?: project.name + "-" + project.version + suffix, suffix)
         val archiveDir = File(libsDir(project))
         val result = File(archiveDir.path, fullArchiveName)
         val outStream = outputStreamFactory(FileOutputStream(result))
@@ -325,7 +322,7 @@ class PackageConfig(val project: Project) : AttributeHolder {
     /**
      * Package all the jar files necessary for a maven repo: classes, sources, javadocs.
      */
-    public fun mavenJars(init: MavenJars.(p: MavenJars) -> Unit) : MavenJars {
+    fun mavenJars(init: MavenJars.(p: MavenJars) -> Unit) : MavenJars {
         val m = MavenJars(this)
         m.init(m)
 
